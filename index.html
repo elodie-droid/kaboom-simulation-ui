@@ -50,7 +50,7 @@
   async function validateLicense() {
     LICENSE = document.getElementById("license").value;
 
-    const res = await fetch("https://TON-N8N/webhook/start_session", {
+    const res = await fetch(" https://argelia-remanent-thistly.ngrok-free.dev", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ license_code: LICENSE })
