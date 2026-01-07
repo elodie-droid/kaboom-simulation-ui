@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>KABOOM – Simulation DESC</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 40px;
+      max-width: 600px;
+      margin: auto;
+    }
+    .hidden { display: none; }
+    button {
+      padding: 12px;
+      margin: 10px 0;
+      width: 100%;
+      cursor: pointer;
+    }
+    .persona button {
+      background: #f2f2f2;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Simulation DESC</h1>
+
+  <div id="step-licence">
+    <label>Code d’accès :</label>
+    <input id="license" type="text" placeholder="TEST-001" />
+    <button onclick="validateLicense()">Valider</button>
+    <p id="error" style="color:red;"></p>
+  </div>
+
+  <div id="step-persona" class="hidden">
+    <h2>Choisissez un collaborateur</h2>
+
+    <div class="persona">
+      <button onclick="startSession('normal')">Collaborateur normal</button>
+      <button onclick="startSession('mauvaise_foi')">Mauvaise foi</button>
+      <button onclick="startSession('agressif')">Agressif</button>
+      <button onclick="startSession('silencieux')">Silencieux</button>
+    </div>
+  </div>
+
+<script>
+  let LICENSE = "";
+
+  async function validateLicense() {
+    LICENSE = document.getElementById("license").value;
+
+    const res = await fetch("https://TON-N8N/webhook/start_session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ license_code: LICENSE })
+    });
+
+    const data = await res.json();
+
+    if (!data.success) {
+      document.getElementById("error").innerText = data.message;
+      return;
+    }
+
+    document.getElementById("step-licence").classList.add("hidden");
+    document.getElementById("step-persona").classList.remove("hidden");
+  }
+
+  async function startSession(persona) {
+    await fetch("https://TON-N8N/webhook/start_session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        license_code: LICENSE,
+        persona: persona
+      })
+    });
+
+    alert("Session démarrée avec le persona : " + persona);
+  }
+</script>
+
+</body>
+</html>
