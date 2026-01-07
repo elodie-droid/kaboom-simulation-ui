@@ -98,6 +98,14 @@
         document.getElementById("error").innerText = data.message || "Code invalide.";
         return;
       }
+if (!data.success) {
+  document.getElementById("error").innerText = data.message || "Code invalide.";
+  return;
+}
+
+
+document.getElementById("step-licence").classList.add("hidden");
+document.getElementById("step-persona").classList.remove("hidden");
 
       document.getElementById("step-licence").classList.add("hidden");
       document.getElementById("step-persona").classList.remove("hidden");
