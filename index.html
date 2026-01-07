@@ -3,36 +3,64 @@
 <head>
   <meta charset="UTF-8" />
   <title>KABOOM – Simulation DESC</title>
+
   <style>
     body {
-      font-family: sans-serif;
+      font-family: Arial, sans-serif;
       padding: 40px;
       max-width: 600px;
       margin: auto;
     }
-    .hidden { display: none; }
-    button {
-      padding: 12px;
-      margin: 10px 0;
+
+    h1, h2 {
+      text-align: center;
+    }
+
+    input {
       width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      font-size: 16px;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      font-size: 16px;
       cursor: pointer;
     }
+
     .persona button {
       background: #f2f2f2;
+      margin-top: 8px;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .error {
+      color: red;
+      margin-top: 10px;
+      text-align: center;
     }
   </style>
 </head>
+
 <body>
 
   <h1>Simulation DESC</h1>
 
+  <!-- ÉTAPE 1 : LICENCE -->
   <div id="step-licence">
-    <label>Code d’accès :</label>
+    <label>Code d’accès</label>
     <input id="license" type="text" placeholder="TEST-001" />
     <button onclick="validateLicense()">Valider</button>
-    <p id="error" style="color:red;"></p>
+    <div id="error" class="error"></div>
   </div>
 
+  <!-- ÉTAPE 2 : PERSONA -->
   <div id="step-persona" class="hidden">
     <h2>Choisissez un collaborateur</h2>
 
@@ -45,39 +73,59 @@
   </div>
 
 <script>
+  const N8N_URL = "https://argelia-remanent-thistly.ngrok-free.dev/webhook/start_session";
   let LICENSE = "";
 
   async function validateLicense() {
-    LICENSE = document.getElementById("license").value;
+    document.getElementById("error").innerText = "";
+    LICENSE = document.getElementById("license").value.trim();
 
-    const res = await fetch(" https://argelia-remanent-thistly.ngrok-free.dev", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ license_code: LICENSE })
-    });
-
-    const data = await res.json();
-
-    if (!data.success) {
-      document.getElementById("error").innerText = data.message;
+    if (!LICENSE) {
+      document.getElementById("error").innerText = "Veuillez entrer un code.";
       return;
     }
 
-    document.getElementById("step-licence").classList.add("hidden");
-    document.getElementById("step-persona").classList.remove("hidden");
+    try {
+      const res = await fetch(N8N_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ license_code: LICENSE })
+      });
+
+      const data = await res.json();
+
+      if (!data.success) {
+        document.getElementById("error").innerText = data.message || "Code invalide.";
+        return;
+      }
+
+      document.getElementById("step-licence").classList.add("hidden");
+      document.getElementById("step-persona").classList.remove("hidden");
+
+    } catch (err) {
+      document.getElementById("error").innerText = "Erreur de connexion au serveur.";
+      console.error(err);
+    }
   }
 
   async function startSession(persona) {
-    await fetch(" https://argelia-remanent-thistly.ngrok-free.dev", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        license_code: LICENSE,
-        persona: persona
-      })
-    });
+    try {
+      const res = await fetch(N8N_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          license_code: LICENSE,
+          persona: persona
+        })
+      });
 
-    alert("Session démarrée avec le persona : " + persona);
+      const data = await res.json();
+      alert("Session démarrée ✅\n\n" + JSON.stringify(data, null, 2));
+
+    } catch (err) {
+      alert("Erreur lors du démarrage de la session");
+      console.error(err);
+    }
   }
 </script>
 
