@@ -76,12 +76,29 @@
   const N8N_URL = "https://argelia-remanent-thistly.ngrok-free.dev/webhook/start_session";
   let LICENSE = "";
 
+  function setStatus(msg, isError = false) {
+    const el = document.getElementById("error");
+    el.style.color = isError ? "red" : "green";
+    el.innerText = msg || "";
+  }
+
+  function showPersonas() {
+    document.getElementById("step-licence").classList.add("hidden");
+    document.getElementById("step-persona").classList.remove("hidden");
+  }
+
+  function normalizeResponse(data) {
+    // n8n renvoie parfois un tableau: [{...}]
+    if (Array.isArray(data)) return data[0] || {};
+    return data || {};
+  }
+
   async function validateLicense() {
-    document.getElementById("error").innerText = "";
     LICENSE = document.getElementById("license").value.trim();
+    setStatus("");
 
     if (!LICENSE) {
-      document.getElementById("error").innerText = "Veuillez entrer un code.";
+      setStatus("Veuillez entrer un code.", true);
       return;
     }
 
@@ -92,27 +109,28 @@
         body: JSON.stringify({ license_code: LICENSE })
       });
 
-      const data = await res.json();
+      const raw = await res.json();
+      const data = normalizeResponse(raw);
 
-      if (!data.success) {
-        document.getElementById("error").innerText = data.message || "Code invalide.";
+      console.log("Réponse n8n (raw):", raw);
+      console.log("Réponse n8n (normalized):", data);
+
+      // success peut être true, "true", "True", 1...
+      const success = (data.success === true) ||
+                      (typeof data.success === "string" && data.success.toLowerCase() === "true") ||
+                      (data.success === 1);
+
+      if (!success) {
+        setStatus(data.message || "Code invalide / crédit insuffisant.", true);
         return;
       }
-if (!data.success) {
-  document.getElementById("error").innerText = data.message || "Code invalide.";
-  return;
-}
 
-
-document.getElementById("step-licence").classList.add("hidden");
-document.getElementById("step-persona").classList.remove("hidden");
-
-      document.getElementById("step-licence").classList.add("hidden");
-      document.getElementById("step-persona").classList.remove("hidden");
+      setStatus(data.message || "Session créée ✅", false);
+      showPersonas();
 
     } catch (err) {
-      document.getElementById("error").innerText = "Erreur de connexion au serveur.";
       console.error(err);
+      setStatus("Erreur de connexion au serveur.", true);
     }
   }
 
@@ -121,21 +139,20 @@ document.getElementById("step-persona").classList.remove("hidden");
       const res = await fetch(N8N_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          license_code: LICENSE,
-          persona: persona
-        })
+        body: JSON.stringify({ license_code: LICENSE, persona })
       });
 
-      const data = await res.json();
-      alert("Session démarrée ✅\n\n" + JSON.stringify(data, null, 2));
+      const raw = await res.json();
+      const data = normalizeResponse(raw);
 
+      alert("Persona choisi ✅\n\n" + JSON.stringify(data, null, 2));
     } catch (err) {
-      alert("Erreur lors du démarrage de la session");
       console.error(err);
+      alert("Erreur lors du démarrage de la session");
     }
   }
 </script>
+
 
 </body>
 </html>
