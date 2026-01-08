@@ -3,83 +3,55 @@
 <head>
   <meta charset="UTF-8" />
   <title>KABOOM – Simulation DESC</title>
-
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 40px;
-      max-width: 600px;
-      margin: auto;
-    }
-
-    h1, h2 {
-      text-align: center;
-    }
-
-    input {
-      width: 100%;
-      padding: 10px;
-      margin: 10px 0;
-      font-size: 16px;
-    }
-
-    button {
-      width: 100%;
-      padding: 12px;
-      margin-top: 10px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-
-    .persona button {
-      background: #f2f2f2;
-      margin-top: 8px;
-    }
-
-    .hidden {
-      display: none;
-    }
-
-    .error {
-      color: red;
-      margin-top: 10px;
-      text-align: center;
-    }
+    body { font-family: Arial, sans-serif; padding: 40px; max-width: 600px; margin: auto; }
+    h1, h2 { text-align: center; }
+    input { width: 100%; padding: 10px; margin: 10px 0; font-size: 16px; }
+    button { width: 100%; padding: 12px; margin-top: 10px; font-size: 16px; cursor: pointer; }
+    .persona button { background: #f2f2f2; margin-top: 8px; }
+    .hidden { display: none; }
+    .status { margin-top: 10px; text-align: center; }
   </style>
 </head>
 
 <body>
-
   <h1>Simulation DESC</h1>
 
-  <!-- ÉTAPE 1 : LICENCE -->
+  <!-- ÉCRAN 1 : LICENCE -->
   <div id="step-licence">
     <label>Code d’accès</label>
     <input id="license" type="text" placeholder="TEST-001" />
-    <button onclick="validateLicense()">Valider</button>
-    <div id="error" class="error"></div>
+    <button id="btn-validate" onclick="validateLicense()">Valider</button>
+    <div id="status" class="status"></div>
   </div>
 
-  <!-- ÉTAPE 2 : PERSONA -->
+  <!-- ÉCRAN 2 : PERSONAS -->
   <div id="step-persona" class="hidden">
     <h2>Choisissez un collaborateur</h2>
 
     <div class="persona">
-      <button onclick="startSession('normal')">Collaborateur normal</button>
-      <button onclick="startSession('mauvaise_foi')">Mauvaise foi</button>
-      <button onclick="startSession('agressif')">Agressif</button>
-      <button onclick="startSession('silencieux')">Silencieux</button>
+      <button onclick="choosePersona('normal')">Collaborateur normal</button>
+      <button onclick="choosePersona('mauvaise_foi')">Mauvaise foi</button>
+      <button onclick="choosePersona('agressif')">Agressif</button>
+      <button onclick="choosePersona('silencieux')">Silencieux</button>
     </div>
+
+    <button style="margin-top:16px;" onclick="resetFlow()">Changer de code</button>
   </div>
 
 <script>
   const N8N_URL = "https://argelia-remanent-thistly.ngrok-free.dev/webhook/start_session";
   let LICENSE = "";
 
-  function setStatus(msg, isError = false) {
-    const el = document.getElementById("error");
+  function setStatus(msg, isError=false) {
+    const el = document.getElementById("status");
     el.style.color = isError ? "red" : "green";
     el.innerText = msg || "";
+  }
+
+  function showLicense() {
+    document.getElementById("step-persona").classList.add("hidden");
+    document.getElementById("step-licence").classList.remove("hidden");
   }
 
   function showPersonas() {
@@ -87,15 +59,21 @@
     document.getElementById("step-persona").classList.remove("hidden");
   }
 
-  function normalizeResponse(data) {
-    // n8n renvoie parfois un tableau: [{...}]
-    if (Array.isArray(data)) return data[0] || {};
-    return data || {};
+  function resetFlow() {
+    LICENSE = "";
+    document.getElementById("license").value = "";
+    setStatus("");
+    showLicense();
   }
 
+  // Sécurité : on force toujours l'écran licence au chargement
+  window.addEventListener("load", () => {
+    showLicense();
+  });
+
   async function validateLicense() {
-    LICENSE = document.getElementById("license").value.trim();
     setStatus("");
+    LICENSE = document.getElementById("license").value.trim();
 
     if (!LICENSE) {
       setStatus("Veuillez entrer un code.", true);
@@ -109,23 +87,16 @@
         body: JSON.stringify({ license_code: LICENSE })
       });
 
-      const raw = await res.json();
-      const data = normalizeResponse(raw);
+      const data = await res.json();
 
-      console.log("Réponse n8n (raw):", raw);
-      console.log("Réponse n8n (normalized):", data);
-
-      // success peut être true, "true", "True", 1...
-      const success = (data.success === true) ||
-                      (typeof data.success === "string" && data.success.toLowerCase() === "true") ||
-                      (data.success === 1);
-
-      if (!success) {
+      // Si ton n8n renvoie success:false quand pas de crédit / mauvais code
+      if (data && data.success === false) {
         setStatus(data.message || "Code invalide / crédit insuffisant.", true);
         return;
       }
 
-      setStatus(data.message || "Session créée ✅", false);
+      // Sinon on considère que c'est OK
+      setStatus("Code validé ✅", false);
       showPersonas();
 
     } catch (err) {
@@ -134,7 +105,8 @@
     }
   }
 
-  async function startSession(persona) {
+  async function choosePersona(persona) {
+    // IMPORTANT : ici on ne bloque pas l’UI, on teste juste l’appel
     try {
       const res = await fetch(N8N_URL, {
         method: "POST",
@@ -142,19 +114,14 @@
         body: JSON.stringify({ license_code: LICENSE, persona })
       });
 
-      const raw = await res.json();
-      const data = normalizeResponse(raw);
-
+      const data = await res.json();
       alert("Persona choisi ✅\n\n" + JSON.stringify(data, null, 2));
+
     } catch (err) {
       console.error(err);
-      alert("Erreur lors du démarrage de la session");
+      alert("Erreur lors du choix du persona");
     }
   }
-  window.addEventListener("load", () => showPersonas());
-
 </script>
-
-
 </body>
 </html>
